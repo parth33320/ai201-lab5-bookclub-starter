@@ -6,10 +6,11 @@ and total pages read.
 """
 
 from datetime import date, datetime, timezone
+import pytz
 from services import reading_service
 
 
-def calculate_streak(user_id: str) -> int:
+def calculate_streak(user_id: str, tz_name: str = "UTC") -> int:
     """
     Calculate a user's current reading streak in consecutive days.
 
@@ -30,13 +31,23 @@ def calculate_streak(user_id: str) -> int:
     if not events:
         return 0
 
-    # Collect unique reading dates, most recent first.
-    dates = sorted(
-        set(e.started_at.date() for e in events),
-        reverse=True,
-    )
+    # DIAGNOSIS: Docstring says: "finished at least one book", Code does: uses e.started_at
+    # ADR 0001: Handle timezone consistency
+    try:
+        tz = pytz.timezone(tz_name)
+    except pytz.UnknownTimeZoneError:
+        tz = pytz.UTC
 
-    today = date.today()
+    # Collect unique reading dates in the user's local timezone, most recent first.
+    # finished_at is stored in UTC.
+    local_dates = set()
+    for e in events:
+        local_finish = e.finished_at.replace(tzinfo=pytz.UTC).astimezone(tz)
+        local_dates.add(local_finish.date())
+
+    dates = sorted(local_dates, reverse=True)
+
+    today = datetime.now(tz).date()
 
     # Streak must start from today or yesterday — otherwise it has already broken.
     if (today - dates[0]).days > 1:
@@ -53,23 +64,32 @@ def calculate_streak(user_id: str) -> int:
     return streak
 
 
-def books_this_month(user_id: str) -> int:
+def books_this_month(user_id: str, tz_name: str = "UTC") -> int:
     """
     Count the number of books the user finished in the current calendar month.
 
     Args:
         user_id: ID of the user.
+        tz_name: User's local timezone.
 
     Returns:
         Count of books finished this month.
     """
     events = reading_service.get_reading_history(user_id)
-    today = date.today()
-    return sum(
-        1
-        for e in events
-        if e.finished_at.year == today.year and e.finished_at.month == today.month
-    )
+
+    try:
+        tz = pytz.timezone(tz_name)
+    except pytz.UnknownTimeZoneError:
+        tz = pytz.UTC
+
+    today = datetime.now(tz).date()
+
+    count = 0
+    for e in events:
+        local_finish = e.finished_at.replace(tzinfo=pytz.UTC).astimezone(tz)
+        if local_finish.year == today.year and local_finish.month == today.month:
+            count += 1
+    return count
 
 
 def total_pages_read(user_id: str) -> int:
@@ -83,4 +103,54 @@ def total_pages_read(user_id: str) -> int:
         Total pages read as an integer.
     """
     events = reading_service.get_reading_history(user_id)
+    # AUDIT: sum() correctly handles 0 pages.
     return sum(e.book.pages for e in events)
+
+
+def calculate_genre_streak(user_id: str, genre: str, tz_name: str = "UTC") -> int:
+    """
+    Calculate a user's current reading streak for a specific genre.
+
+    A genre streak is the number of consecutive calendar days on which the user
+    finished at least one book in the specified genre, counting back from
+    today (or yesterday).
+
+    Args:
+        user_id: ID of the user.
+        genre:   The genre to filter by.
+        tz_name: User's local timezone.
+
+    Returns:
+        The genre-specific streak count as an integer.
+    """
+    events = reading_service.get_reading_history(user_id)
+    genre_events = [e for e in events if e.book.genre == genre]
+
+    if not genre_events:
+        return 0
+
+    try:
+        tz = pytz.timezone(tz_name)
+    except pytz.UnknownTimeZoneError:
+        tz = pytz.UTC
+
+    local_dates = set()
+    for e in genre_events:
+        local_finish = e.finished_at.replace(tzinfo=pytz.UTC).astimezone(tz)
+        local_dates.add(local_finish.date())
+
+    dates = sorted(local_dates, reverse=True)
+    today = datetime.now(tz).date()
+
+    if (today - dates[0]).days > 1:
+        return 0
+
+    streak = 1
+    for i in range(len(dates) - 1):
+        delta = (dates[i] - dates[i + 1]).days
+        if delta == 1:
+            streak += 1
+        else:
+            break
+
+    return streak

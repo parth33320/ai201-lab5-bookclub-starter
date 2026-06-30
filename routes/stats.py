@@ -4,7 +4,7 @@ routes/stats.py — BookClub
 Routes for reading statistics: streak, books this month, total pages read.
 """
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from services import stats_service
 
 stats_bp = Blueprint("stats", __name__)
@@ -20,11 +20,28 @@ def get_stats(user_id):
         books_this_month  (int) — books finished in the current calendar month
         total_pages_read  (int) — total pages across all finished books
     """
+    tz_name = request.args.get("tz", "UTC")
     return jsonify(
         {
             "user_id": user_id,
-            "reading_streak": stats_service.calculate_streak(user_id),
-            "books_this_month": stats_service.books_this_month(user_id),
+            "reading_streak": stats_service.calculate_streak(user_id, tz_name),
+            "books_this_month": stats_service.books_this_month(user_id, tz_name),
             "total_pages_read": stats_service.total_pages_read(user_id),
+        }
+    )
+
+
+@stats_bp.route("/<user_id>/genre-streak/<genre>", methods=["GET"])
+def get_genre_streak(user_id, genre):
+    """
+    Return the reading streak for a specific genre.
+    """
+    tz_name = request.args.get("tz", "UTC")
+    streak = stats_service.calculate_genre_streak(user_id, genre, tz_name)
+    return jsonify(
+        {
+            "user_id": user_id,
+            "genre": genre,
+            "streak": streak,
         }
     )
