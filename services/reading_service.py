@@ -118,10 +118,11 @@ def get_reading_history(user_id: str) -> list[ReadingEvent]:
     Returns:
         List of ReadingEvent objects ordered by finished_at descending.
     """
+    # DIAGNOSIS: Docstring says: "most recently finished first", Code does: order_by(ReadingEvent.started_at.desc())
     return (
         ReadingEvent.query.filter_by(user_id=user_id)
         .filter(ReadingEvent.finished_at.isnot(None))
-        .order_by(ReadingEvent.started_at.desc())
+        .order_by(ReadingEvent.finished_at.desc())
         .all()
     )
 

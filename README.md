@@ -1,4 +1,4 @@
-# BookClub — AI201 Lab 5 Starter
+# BookClub — Tinker 5 (Elite Engineering Edition)
 
 A small reading list app where club members track books, log their progress, and see their reading stats.
 
@@ -31,7 +31,31 @@ python app.py          # start the server (runs at http://127.0.0.1:5000)
 | POST   | `/reading/finish`               | Mark a book as finished              |
 | GET    | `/reading/current/<user_id>`    | Books a user is currently reading    |
 | GET    | `/reading/history/<user_id>`    | Books a user has finished            |
-| GET    | `/stats/<user_id>`              | Reading streak, books this month, total pages |
+| GET    | `/stats/<user_id>`              | Reading streak, books this month, total pages (supports `?tz=`) |
+| GET    | `/stats/<user_id>/genre-streak/<genre>` | Genre-specific reading streak (supports `?tz=`) |
+
+## Lab Completion Summary
+
+This lab was completed using the Elite Engineering SDLC, focusing on:
+1. **Diagnosis**: Identified mismatches between docstring contracts and code implementation for streak and history bugs.
+2. **Timezone Accuracy**: Extended the streak and monthly stats logic to handle UTC-to-Local conversion via a `tz` query parameter.
+3. **Advanced Features**: Implemented Genre-specific streaks.
+4. **Accountability**: Recorded design decisions in `docs/adr/0001-streak-logic-extensions.md`.
+5. **Verification**: Full coverage via `pytest` unit tests and Playwright headless API tests.
+
+### Mockup of New Stats
+```json
+{
+  "user_id": "4dbd2552...",
+  "reading_streak": 3,
+  "books_this_month": 3,
+  "total_pages_read": 814,
+  "genre_streaks": {
+    "sci-fi": 2,
+    "literary fiction": 1
+  }
+}
+```
 
 ## Codebase structure
 
