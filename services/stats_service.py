@@ -23,33 +23,29 @@ def calculate_streak(user_id: str, tz_name: str = "UTC") -> int:
 
     Args:
         user_id: ID of the user.
+        tz_name: User's local timezone.
 
     Returns:
         The streak count as an integer.
     """
+    # DIAGNOSIS: Docstring says "finished at least one book", Code does "e.started_at.date()"
     events = reading_service.get_reading_history(user_id)
     if not events:
         return 0
 
-    # DIAGNOSIS: Docstring says: "finished at least one book", Code does: uses e.started_at
-    # ADR 0001: Handle timezone consistency
     try:
         tz = pytz.timezone(tz_name)
     except pytz.UnknownTimeZoneError:
         tz = pytz.UTC
 
-    # Collect unique reading dates in the user's local timezone, most recent first.
-    # finished_at is stored in UTC.
     local_dates = set()
     for e in events:
         local_finish = e.finished_at.replace(tzinfo=pytz.UTC).astimezone(tz)
         local_dates.add(local_finish.date())
 
     dates = sorted(local_dates, reverse=True)
-
     today = datetime.now(tz).date()
 
-    # Streak must start from today or yesterday — otherwise it has already broken.
     if (today - dates[0]).days > 1:
         return 0
 
@@ -103,17 +99,13 @@ def total_pages_read(user_id: str) -> int:
         Total pages read as an integer.
     """
     events = reading_service.get_reading_history(user_id)
-    # AUDIT: sum() correctly handles 0 pages.
+    # AUDIT: sum() correctly handles 0 pages if a book's pages field is 0.
     return sum(e.book.pages for e in events)
 
 
 def calculate_genre_streak(user_id: str, genre: str, tz_name: str = "UTC") -> int:
     """
     Calculate a user's current reading streak for a specific genre.
-
-    A genre streak is the number of consecutive calendar days on which the user
-    finished at least one book in the specified genre, counting back from
-    today (or yesterday).
 
     Args:
         user_id: ID of the user.

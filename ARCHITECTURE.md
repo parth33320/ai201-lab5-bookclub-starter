@@ -18,13 +18,13 @@ graph TD
 ```
 
 ### 1. Route Layer
-Responsible for receiving HTTP requests, extracting parameters, calling service functions, and formatting JSON responses.
+Responsible for receiving HTTP requests, extracting parameters (like `tz`), calling service functions, and formatting JSON responses.
 - `routes/books.py`: Book management.
 - `routes/reading.py`: Reading progress tracking.
-- `routes/stats.py`: Statistics and streaks.
+- `routes/stats.py`: Statistics and streaks (handles `tz` param).
 
 ### 2. Service Layer
-Contains all business logic and calculations. Services are independent of the transport layer (HTTP).
+Contains all business logic and calculations. Services are independent of the transport layer (HTTP) but accept parameters like `tz_name`.
 - `services/reading_service.py`: CRUD for reading events.
 - `services/stats_service.py`: Logic for streaks, page counts, and monthly summaries.
 
@@ -34,28 +34,19 @@ Defines the data structure and relationships using SQLAlchemy.
 - `Book`: Shared library of titles.
 - `ReadingEvent`: Join table recording when a user starts and finishes a book.
 
-## New API Interface: Genre Streak
+## API Interface: Statistics
+
+### GET `/stats/<user_id>?tz=<timezone>`
+- **reading_streak**: Days with at least one finish.
+- **books_this_month**: Finished in current local month.
+- **total_pages_read**: Sum of pages of all finished books.
 
 ### GET `/stats/<user_id>/genre-streak/<genre>?tz=<timezone>`
-
-- **Description**: Returns the current reading streak for a specific genre.
-- **Parameters**:
-  - `user_id` (path): The ID of the user.
-  - `genre` (path): The genre to calculate the streak for (e.g., `sci-fi`).
-  - `tz` (query, optional): The user's local timezone (e.g., `America/New_York`). Defaults to `UTC`.
-- **Response JSON**:
-  ```json
-  {
-    "user_id": "uuid",
-    "genre": "sci-fi",
-    "streak": 3
-  }
-  ```
+- **streak**: Genre-specific reading streak.
 
 ## Flow Example: Streak Calculation
-1. **Client** requests `GET /stats/alex_id`.
-2. **`routes/stats.py:get_stats()`** receives the request and calls `stats_service.calculate_streak(user_id)`.
+1. **Client** requests `GET /stats/alex_id?tz=America/New_York`.
+2. **`routes/stats.py:get_stats()`** extracts `tz` and calls `stats_service.calculate_streak(user_id, tz_name)`.
 3. **`services/stats_service.py:calculate_streak()`** calls `reading_service.get_reading_history(user_id)`.
 4. **`services/reading_service.py:get_reading_history()`** queries `ReadingEvent` models filtered by `user_id` and `finished_at is not None`.
-5. **SQLAlchemy** retrieves data from the DB.
-6. The result flows back up the stack, with `calculate_streak` performing the date-diff logic.
+5. **`stats_service`** converts UTC `finished_at` to the requested timezone and performs the consecutive day logic.

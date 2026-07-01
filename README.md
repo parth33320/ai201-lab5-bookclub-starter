@@ -43,17 +43,20 @@ This lab was completed using the Elite Engineering SDLC, focusing on:
 4. **Accountability**: Recorded design decisions in `docs/adr/0001-streak-logic-extensions.md`.
 5. **Verification**: Full coverage via `pytest` unit tests and Playwright headless API tests.
 
+### Lab Completion Results
+- **Bug 1 (Streak)**: Fixed logic bug (started_at -> finished_at). Streak for alex is now 3 (in NY timezone).
+- **Bug 2 (History)**: Fixed display bug (sorting by started_at -> finished_at.desc()).
+- **Timezone Support**: Added `tz` parameter. Correctly handles day/month boundaries.
+- **Genre Streaks**: Added `/stats/<user_id>/genre-streak/<genre>` endpoint.
+- **Verification**: All tests passing. Captured "Before" and "After" evidence in `evidence/`.
+
 ### Mockup of New Stats
 ```json
 {
   "user_id": "4dbd2552...",
   "reading_streak": 3,
   "books_this_month": 3,
-  "total_pages_read": 814,
-  "genre_streaks": {
-    "sci-fi": 2,
-    "literary fiction": 1
-  }
+  "total_pages_read": 814
 }
 ```
 
