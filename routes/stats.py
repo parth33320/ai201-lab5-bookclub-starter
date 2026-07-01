@@ -35,6 +35,11 @@ def get_stats(user_id):
 def get_genre_streak(user_id, genre):
     """
     Return the reading streak for a specific genre.
+
+    Response JSON:
+        user_id (str)
+        genre   (str)
+        streak  (int)
     """
     tz_name = request.args.get("tz", "UTC")
     streak = stats_service.calculate_genre_streak(user_id, genre, tz_name)
